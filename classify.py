@@ -31,9 +31,9 @@ if __name__ == '__main__':
     folds = []
 
     for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
-        
+
         if args.model == 'SVC':
-            clf = make_pipeline(StandardScaler(), LinearSVC())
+            clf = make_pipeline(StandardScaler(), LinearSVC(C=1e-5))
         elif args.model == 'KNN':
             clf = KNeighborsClassifier()
         else:

@@ -1,5 +1,5 @@
 
-
+import collections
 import os
 import itertools
 import numpy as np
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--target', default='hit')
     parser.add_argument('--rhs', default='right')
     parser.add_argument('--epochs', type=int, default=3)
-    parser.add_argument('--max-batch-size', type=int, default=20)
+    parser.add_argument('--max-batch-size', type=int, default=15)
     parser.add_argument('--max-support', type=int, default=20)
     parser.add_argument('--batch-size', type=int, default=10)
     args = parser.parse_args()
@@ -183,7 +183,6 @@ if __name__ == '__main__':
         print('PyTorch is using CPU')
 
     tokenizer = AutoTokenizer.from_pretrained(args.modelname)
-    # tokenizer = AutoTokenizer.from_pretrained('emanjavacas/GysBERT')
     tokenizer.add_special_tokens({'additional_special_tokens': ['[TGT]']})
 
     data = pd.read_csv(args.input_file)
@@ -205,7 +204,12 @@ if __name__ == '__main__':
     folds = []
 
     for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
-        train, dev = train_test_split(train, shuffle=True, stratify=y[train], test_size=0.1)
+        hapaxes = set([l for l, c in collections.Counter(y[train]).items() if c == 1])
+        train, dev = next(StratifiedKFold(10, shuffle=True).split(
+            # np.zeros(len(train)), y[train]))
+            [i for i in train if y[i] not in hapaxes],
+            [y[i] for i in train if y[i] not in hapaxes]))
+
         train_dataset = get_dataset(sents[train], spans[train], y[train])
         dev_dataset = get_dataset(sents[dev], spans[dev], y[dev])
         test_dataset = get_dataset(sents[test], spans[test], y[test])
@@ -236,7 +240,7 @@ if __name__ == '__main__':
         preds, scores = predict(model, tokenizer, train_dataset, test_dataset,
             device=device, max_batch_size=args.max_batch_size, max_support=50)
 
-        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'dev': dev, 'scores': scores, 'preds': preds}))
+        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'scores': scores, 'preds': preds}))
 
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.metric-finetune.results.parquet']))

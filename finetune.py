@@ -114,7 +114,7 @@ if __name__ == '__main__':
         scores = np.max(softmax(preds, axis=1), axis=1)
         preds = np.argmax(preds, axis=1)
 
-        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'dev': dev, 'scores': scores, 'preds': preds}))
+        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'scores': scores, 'preds': preds}))
 
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.finetune.results.parquet']))

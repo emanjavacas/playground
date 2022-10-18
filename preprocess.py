@@ -73,10 +73,11 @@ if __name__ == '__main__':
         print('PyTorch is using CPU')
 
     tokenizer = AutoTokenizer.from_pretrained(args.modelname)
-    model = AutoModel.from_pretrained(args.modelname)
+    model = AutoModel.from_pretrained(args.modelname).to(device)
     model.eval()
 
     for path in args.input_files:
+        print(path)
         data = pd.read_csv(path)
         for heading in [args.lhs, args.target, args.rhs]:
             data[heading] = data[heading].transform(normalise)
