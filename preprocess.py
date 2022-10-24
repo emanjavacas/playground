@@ -1,6 +1,8 @@
 
 import os
+import collections
 
+import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel
@@ -50,6 +52,7 @@ def encode_data(tokenizer, sents, starts, ends, sym='[TGT]'):
             char_start += len(sym) + 1
             char_end += len(sym) + 1
         for idx, (token_start, token_end) in enumerate(sent['offset_mapping']):
+            if token_start == token_end == 0: continue
             if token_start == char_start:
                 target_start = idx
             if token_end == char_end:
@@ -93,6 +96,9 @@ if __name__ == '__main__':
             data[heading] = data[heading].transform(normalise)
         sents, starts, ends = read_data(data[args.lhs], data[args.target], data[args.rhs])
         sents, spans = encode_data(tokenizer, sents, starts, ends, sym=None)
+        print(collections.Counter(
+                [tuple(tokenizer.convert_ids_to_tokens(tokenizer.encode(s))[a:b])
+                for s, (a, b) in zip(sents, spans)]))
 
         # Generate sentence embeddings
         with torch.no_grad():
@@ -101,8 +107,13 @@ if __name__ == '__main__':
 
         embeddings = []
         for idx, (start, stop) in enumerate(spans):
-            embeddings.append(output['last_hidden_state'][idx][start:stop].mean(0).cpu().numpy())
+            embedding = output['last_hidden_state'][idx][start:stop].mean(0).cpu().numpy()
+            if any(np.isnan(embedding)):
+                raise
+            embeddings.append(embedding)
 
         data['embedding'] = embeddings
         prefix, suffix = os.path.splitext(path)
         data.to_parquet(''.join([prefix, '.embeddings.parquet']))
+
+
