@@ -9,9 +9,9 @@ from scipy.special import softmax
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           DataCollatorWithPadding, EarlyStoppingCallback,
-                          Trainer, TrainingArguments, AutoModel)
+                          Trainer, TrainingArguments)
 
-from preprocess import encode_data
+from preprocess import encode_data, read_data
 
 
 def get_dataset(tokenizer, sents, spans, labels):
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--lhs', default='left')
     parser.add_argument('--target', default='hit')
     parser.add_argument('--rhs', default='right')
-    parser.add_argument('--epochs', type=int, default=3)
+    parser.add_argument('--epochs', type=int, default=6)
     parser.add_argument('--output-dir', required=True)
     args = parser.parse_args()
 
@@ -53,29 +53,11 @@ if __name__ == '__main__':
     # tokenizer = AutoTokenizer.from_pretrained('emanjavacas/GysBERT')
     tokenizer.add_special_tokens({'additional_special_tokens': ['[TGT]']})
 
-    training_args = TrainingArguments(
-        output_dir=args.output_dir,
-        # output_dir='./',
-        learning_rate=4.5e-5,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
-        num_train_epochs=args.epochs,
-        # num_train_epochs=3,
-        weight_decay=0.1,
-        do_eval=True,
-        save_strategy='epoch',
-        evaluation_strategy="epoch",
-        load_best_model_at_end=True)
-
     data = pd.read_csv(args.input_file)
-    # data = pd.read_csv('../geur/reuk_300.csv')
-    # prepare sents
     for heading in [args.lhs, args.target, args.rhs]:
         data[heading] = data[heading].transform(normalise)
-    sents = data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
-    starts = data[args.lhs].str.len() + 1
-    stops = data[args.lhs].str.len() + 1 + data[args.target].str.len()
-    sents, spans = encode_data(tokenizer, sents, starts, stops)
+    sents, starts, ends = read_data(data[args.lhs], data[args.target], data[args.rhs])
+    sents, spans = encode_data(tokenizer, sents, starts, ends)
     sents, spans = np.array(sents), np.array(spans)
     # prepare labels
     label2id = {label: id for id, label in enumerate(sorted(data[args.label].unique()))}
@@ -98,6 +80,18 @@ if __name__ == '__main__':
         # the target special token [TGT]
         model.resize_token_embeddings(len(tokenizer))
 
+        training_args = TrainingArguments(
+            output_dir=args.output_dir,
+            learning_rate=4.5e-5,
+            per_device_train_batch_size=8,
+            per_device_eval_batch_size=8,
+            num_train_epochs=args.epochs,
+            weight_decay=0.1,
+            do_eval=True,
+            save_strategy='epoch',
+            evaluation_strategy="epoch",
+            load_best_model_at_end=True)
+
         trainer = Trainer(
             model=model,
             args=training_args,
@@ -113,8 +107,14 @@ if __name__ == '__main__':
         preds, _, _ = trainer.predict(test_dataset)
         scores = np.max(softmax(preds, axis=1), axis=1)
         preds = np.argmax(preds, axis=1)
+        preds = [id2label[i] for i in preds]
 
-        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'scores': scores, 'preds': preds}))
+        folds.append(pd.DataFrame({
+            'fold': fold, 
+            'test': test,
+            'trues': [id2label[y[i]] for i in test],
+            'scores': scores, 
+            'preds': preds}))
 
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.finetune.results.parquet']))

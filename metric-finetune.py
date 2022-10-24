@@ -186,7 +186,9 @@ if __name__ == '__main__':
     tokenizer.add_special_tokens({'additional_special_tokens': ['[TGT]']})
 
     data = pd.read_csv(args.input_file)
-    # data = pd.read_csv('../geur/reuk_300.csv')
+    if any(data[args.label].value_counts() == 1):
+        raise ValueError("Found singleton class")
+
     # prepare sents
     for heading in [args.lhs, args.target, args.rhs]:
         data[heading] = data[heading].transform(normalise)
@@ -204,11 +206,8 @@ if __name__ == '__main__':
     folds = []
 
     for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
-        hapaxes = set([l for l, c in collections.Counter(y[train]).items() if c == 1])
         train, dev = next(StratifiedKFold(10, shuffle=True).split(
-            # np.zeros(len(train)), y[train]))
-            [i for i in train if y[i] not in hapaxes],
-            [y[i] for i in train if y[i] not in hapaxes]))
+            np.zeros(len(train)), y[train]))
 
         train_dataset = get_dataset(sents[train], spans[train], y[train])
         dev_dataset = get_dataset(sents[dev], spans[dev], y[dev])
@@ -239,8 +238,14 @@ if __name__ == '__main__':
 
         preds, scores = predict(model, tokenizer, train_dataset, test_dataset,
             device=device, max_batch_size=args.max_batch_size, max_support=50)
+        preds = [id2label[i] for i in preds]
 
-        folds.append(pd.DataFrame({'fold': fold, 'test': test, 'scores': scores, 'preds': preds}))
+        folds.append(pd.DataFrame({
+            'fold': fold, 
+            'test': test,
+            'trues': [id2label[y[i]] for i in test],
+            'scores': scores, 
+            'preds': preds}))
 
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.metric-finetune.results.parquet']))

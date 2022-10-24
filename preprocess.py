@@ -5,6 +5,16 @@ import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel
 
+# Find start and end index of target word
+def read_data(lhs, target, rhs):
+    sents, starts, ends = [], [], []
+    for (lhs_i, target_i, rhs_i) in zip(lhs, target, rhs):
+        sents.append((lhs_i + ' ' + target_i + ' ' + rhs_i).strip())
+        start = len(lhs_i) + 1 if lhs_i else 0
+        starts.append(start)
+        ends.append(start + len(target_i))
+    return sents, starts, ends
+
 
 def encode_data(tokenizer, sents, starts, ends, sym='[TGT]'):
     """
@@ -81,10 +91,8 @@ if __name__ == '__main__':
         data = pd.read_csv(path)
         for heading in [args.lhs, args.target, args.rhs]:
             data[heading] = data[heading].transform(normalise)
-        sents = data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
-        starts = data[args.lhs].str.len() + 1
-        stops = data[args.lhs].str.len() + 1 + data[args.target].str.len()
-        sents, spans = encode_data(tokenizer, sents, starts, stops, sym=None)
+        sents, starts, ends = read_data(data[args.lhs], data[args.target], data[args.rhs])
+        sents, spans = encode_data(tokenizer, sents, starts, ends, sym=None)
 
         # Generate sentence embeddings
         with torch.no_grad():
