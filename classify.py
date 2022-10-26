@@ -24,23 +24,23 @@ if __name__ == '__main__':
 
     label2id = {label: id for id, label in enumerate(sorted(data[args.label].unique()))}
     id2label = {id: label for label, id in label2id.items()}
-    y = np.array([label2id[label] for label in data[args.label]])
+    y = np.array([label2id[label] for label in data[args.label].values])
     X = np.stack(data['embedding'].values)
     # print(np.where(np.isnan(X).sum(1)))
-    cv = StratifiedKFold(10, shuffle=True, random_state=135)
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=135)
     folds = []
 
-    for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
+    for fold, (train, test) in enumerate(cv.split(X, y)):
 
         if args.model == 'SVC':
             opt = RandomizedSearchCV(
-                make_pipeline(StandardScaler(), LinearSVC(random_state=153)),
+                make_pipeline(StandardScaler(), LinearSVC()),
                 {
                     'linearsvc__C': loguniform(1e-6, 1e+6),
                     'linearsvc__class_weight': [None, 'balanced']
                 },
                 scoring='f1_macro',
-                cv=StratifiedKFold(10, shuffle=True),
+                cv=StratifiedKFold(5, shuffle=True),
                 n_iter=10,
                 n_jobs=-1,
                 verbose=1000,
@@ -53,9 +53,6 @@ if __name__ == '__main__':
                 StandardScaler(), 
                 LinearSVC(C=opt.best_params_['linearsvc__C'],
                           class_weight=opt.best_params_['linearsvc__class_weight']))
-            clf = make_pipeline(
-                StandardScaler(), LinearSVC(C=1e-4))
-
 
         elif args.model == 'KNN':
             opt = GridSearchCV(
@@ -66,7 +63,7 @@ if __name__ == '__main__':
                     'metric': ['manhattan', 'euclidean']
                 },
                 scoring='rand_score',
-                cv=cv,
+                cv=StratifiedKFold(5, shuffle=True),
                 n_jobs=-1,
                 refit=False,
                 verbose=1000
