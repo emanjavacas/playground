@@ -161,6 +161,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--modelname', required=True)
     parser.add_argument('--input-file', required=True)
+    parser.add_argument('--test-file')
     parser.add_argument('--label', required=True)
     parser.add_argument('--lhs', default='left')
     parser.add_argument('--target', default='hit')
@@ -204,6 +205,19 @@ if __name__ == '__main__':
 
     cv = StratifiedKFold(10, shuffle=True, random_state=135)
     folds = []
+    test_folds = []
+    test_data = None
+    if args.test_file:
+        test_data = pd.read_csv(args.test_file)
+        for heading in [args.lhs, args.target, args.rhs]:
+            test_data[heading] = test_data[heading].transform(normalise)
+            test_sents = test_data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
+            test_starts = test_data[args.lhs].str.len() + 1
+            test_stops = test_data[args.lhs].str.len() + 1 + test_data[args.target].str.len()
+            test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
+            test_sents, test_spans = np.array(test_sents), np.array(test_spans)
+        test_y = np.array([label2id[label] for label in test_data[args.label].values])
+        test0_dataset = get_dataset(test_sents, test_spans, test_y)
 
     for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
         train, dev = next(StratifiedKFold(10, shuffle=True).split(
@@ -246,6 +260,20 @@ if __name__ == '__main__':
             'trues': [id2label[y[i]] for i in test],
             'scores': scores, 
             'preds': preds}))
+    
+        if test_data is not None:
+            preds, scores = predict(model, tokenizer, train_dataset, test0_dataset,
+                device=device, max_batch_size=args.max_batch_size, max_support=50)
+            preds = [id2label[i] for i in preds]
+            test_folds.append(pd.DataFrame({
+                'fold': fold, 
+                'preds': preds, 
+                'scores': scores,
+                'trues': [id2label[l] for l in test_y]
+            }))
 
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.metric-finetune.results.parquet']))
+
+    if test_data is not None:
+        pd.concat(test_folds).to_parquet(''.join([prefix, '.metric-finetune.test-results.parquet']))

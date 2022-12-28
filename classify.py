@@ -1,6 +1,7 @@
 
 
 import os
+from itsdangerous import NoneAlgorithm
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, RandomizedSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
@@ -16,6 +17,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-file', required=True, help='CSV file with embeddings in it')
+    parser.add_argument('--test-file')
     parser.add_argument('--label', required=True)
     parser.add_argument('--model', default='SVC')
     args = parser.parse_args()
@@ -29,6 +31,13 @@ if __name__ == '__main__':
     # print(np.where(np.isnan(X).sum(1)))
     cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=135)
     folds = []
+
+    test_data = None
+    test_folds = []
+    if args.test_file:
+        test_data = pd.read_parquet(args.test_file)
+        test_y = np.array([label2id[label] for label in test_data[args.label].values])
+        test_X = np.stack(test_data['embedding'].values)
 
     for fold, (train, test) in enumerate(cv.split(X, y)):
 
@@ -86,5 +95,15 @@ if __name__ == '__main__':
             'trues': [id2label[y[i]] for i in test]
         }))
 
+        if test_data is not None:
+            test_folds.append(pd.DataFrame({
+                'fold': fold, 
+                'preds': [id2label[id] for id in clf.predict(test_X)], 
+                'trues': [id2label[l] for l in test_y]
+            }))
+
     prefix, suffix = os.path.splitext(args.input_file)
     pd.concat(folds).to_parquet(''.join([prefix, '.{}.results'.format(args.model), suffix]))
+
+    if test_data is not None:
+        pd.concat(test_folds).to_parquet(''.join([prefix, '.{}.test-results'.format(args.model), suffix]))
