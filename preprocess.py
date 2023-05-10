@@ -1,4 +1,17 @@
 
+"""
+preprocess.py: This file provides two utility functions that 
+help extracting contextual embeddings from a transformer model. 
+Mostly dealing with subtokenization. For more information on how 
+to run this script, run the command ‘python preprocess.py --help’ 
+in the command line.
+"""
+
+__author__    = "Enrique Manjavacas"
+__copyright__ = "Copyright 2022, Enrique Manjavacas"
+__license__   = "GPL"
+__version__   = "1.0.1"
+
 import os
 import collections
 
@@ -9,6 +22,9 @@ from transformers import AutoTokenizer, AutoModel
 
 # Find start and end index of target word
 def read_data(lhs, target, rhs):
+    """
+    Computes the spans (start and end offsets) from a list of segmented sentences
+    """
     sents, starts, ends = [], [], []
     for (lhs_i, target_i, rhs_i) in zip(lhs, target, rhs):
         sents.append((lhs_i + ' ' + target_i + ' ' + rhs_i).strip())
@@ -66,12 +82,19 @@ def encode_data(tokenizer, sents, starts, ends, sym='[TGT]'):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--modelname', required=True)
-    parser.add_argument('--input-files', nargs='+', required=True)
-    parser.add_argument('--lhs', default='left')
-    parser.add_argument('--target', default='hit')
-    parser.add_argument('--rhs', default='right')
+    parser = argparse.ArgumentParser(
+    "This script extracts embeddings for the target words of given input sentences "
+    "and stores them into a parquet file, with the same name as the source file, but "
+    "with a .parquet extension.")
+    parser.add_argument('--modelname', required=True, 
+                        help="The name of a transformer model (huggingface).")
+    parser.add_argument('--input-files', nargs='+', required=True, 
+                        help="CSV file with at least three field specifying the left "
+                        "and right context as well as the target word.")
+    parser.add_argument('--lhs', default='left', help='Name of the left context column.')
+    parser.add_argument('--target', default='hit', help='Name of the left context column.')
+    parser.add_argument('--rhs', default='right', help='Name of the left context column.')
+    args = parser.parse_args()
     args = parser.parse_args()
 
     # Normalise whitespaces

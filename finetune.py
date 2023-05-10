@@ -1,4 +1,15 @@
 
+"""
+finetune-cv.py: This script performs training on the provided train file, and
+inference on the provided test file. For more information on how to run this 
+script, run the command ‘python finetune.py --help’ in the command line.
+"""
+
+__author__    = "Enrique Manjavacas"
+__copyright__ = "Copyright 2022, Enrique Manjavacas"
+__license__   = "GPL"
+__version__   = "1.0.1"
+
 import os
 
 import numpy as np
@@ -27,16 +38,24 @@ def get_dataset(tokenizer, sents, spans, labels):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--modelname', required=True)
-    parser.add_argument('--input-file', required=True)
-    parser.add_argument('--test-file')
-    parser.add_argument('--label', required=True)
-    parser.add_argument('--lhs', default='left')
-    parser.add_argument('--target', default='hit')
-    parser.add_argument('--rhs', default='right')
-    parser.add_argument('--epochs', type=int, default=6)
-    parser.add_argument('--output-dir', required=True)
+    parser = argparse.ArgumentParser(       
+        "This file performs finetuning on a given train file and a given pre-trained "
+        "transformer model. "
+        "Evaluation is done with Cross-Validation. After training the cross-validation "
+        "results on each fold are stored to a finetune.results.parquet file."
+        "If a test-file was provided, then the model trained in each iteration is used "
+        "for prediction on the test file and the results are output to a file with the "
+        "suffix: finetune.test-results.parquet")
+    parser.add_argument('--modelname', required=True,
+                        help="The name of a transformer model (huggingface).")
+    parser.add_argument('--input-file', required=True, help="File to do training on.")
+    parser.add_argument('--test-file', help="File to do inference on.")
+    parser.add_argument('--label', required=True, help="Name of the label column.")
+    parser.add_argument('--lhs', default='left', help='Name of the left context column.')
+    parser.add_argument('--target', default='hit', help='Name of the left context column.')
+    parser.add_argument('--rhs', default='right', help='Name of the left context column.')
+    parser.add_argument('--epochs', type=int, default=6, help="Number of epochs to train.")
+    parser.add_argument('--output-dir', required=True, help="Directory to store the finetuned model.")
     args = parser.parse_args()
 
     # Normalise whitespaces
@@ -51,7 +70,6 @@ if __name__ == '__main__':
         print('PyTorch is using CPU')
 
     tokenizer = AutoTokenizer.from_pretrained(args.modelname)
-    # tokenizer = AutoTokenizer.from_pretrained('emanjavacas/GysBERT')
     tokenizer.add_special_tokens({'additional_special_tokens': ['[TGT]']})
 
     data = pd.read_csv(args.input_file)

@@ -1,16 +1,29 @@
 
-import collections
+"""
+metric-finetune.py: This script performs training on the provided train file, and
+inference on the provided test file. The finetuning in this script follows a
+non parametric finetuning approach that doesn't involve extra parameters and has
+been shown to offer better few-shot performance. For more information on how to run this 
+script, run the command ‘python metric-finetune.py --help’ in the command line.
+"""
+
+__author__    = "Enrique Manjavacas"
+__copyright__ = "Copyright 2022, Enrique Manjavacas"
+__license__   = "GPL"
+__version__   = "1.0.1"
+
 import os
 import itertools
+
 import numpy as np
 import pandas as pd
-from sklearn import metrics
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
+from torch import optim
 from datasets import Dataset
 from scipy.special import softmax
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn import metrics
+from sklearn.model_selection import StratifiedKFold
 from transformers import AutoModel, AutoTokenizer
 
 from preprocess import encode_data
@@ -158,18 +171,28 @@ def predict_multiple_samples(
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--modelname', required=True)
-    parser.add_argument('--input-file', required=True)
-    parser.add_argument('--test-file')
-    parser.add_argument('--label', required=True)
-    parser.add_argument('--lhs', default='left')
-    parser.add_argument('--target', default='hit')
-    parser.add_argument('--rhs', default='right')
-    parser.add_argument('--epochs', type=int, default=3)
-    parser.add_argument('--max-batch-size', type=int, default=15)
-    parser.add_argument('--max-support', type=int, default=20)
-    parser.add_argument('--batch-size', type=int, default=10)
+    parser = argparse.ArgumentParser(
+    "This file evaluates metric finetuning on a given dataset with a given model."
+    "Evaluation is done with Cross-Validation. After training the cross-validation "
+    "results on each fold are stored to a metric-finetune.results.parquet file."
+    "If a test-file was provided, then the model trained in each iteration is used "
+    "for prediction on the test file and the results are output to a file with the "
+    "suffix: metric-finetune.test-results.parquet")
+    parser.add_argument('--modelname', required=True,
+                        help="The name of a transformer model (huggingface).")
+    parser.add_argument('--input-file', required=True, help="File to do training on.")
+    parser.add_argument('--test-file', help="File to do inference on.")
+    parser.add_argument('--label', required=True, help="Name of the label column.")
+    parser.add_argument('--lhs', default='left', help='Name of the left context column.')
+    parser.add_argument('--target', default='hit', help='Name of the left context column.')
+    parser.add_argument('--rhs', default='right', help='Name of the left context column.')
+    parser.add_argument('--epochs', type=int, default=3, help="Number of epochs to train.")
+    parser.add_argument('--max-batch-size', type=int, default=15, 
+                        help="Maximum number of examples to encode at each given time")
+    parser.add_argument('--max-support', type=int, default=20,
+                        help="Maximum number of support examples per sense in batch")
+    parser.add_argument('--batch-size', type=int, default=10, 
+                        help="Number of query examples per batch")
     args = parser.parse_args()
 
     # Normalise whitespaces

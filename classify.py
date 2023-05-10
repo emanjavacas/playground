@@ -1,13 +1,23 @@
 
+"""
+classify.py: This script performs classification on the provided train file, and
+inference on the provided test file. For more information on how to run this 
+script, run the command ‘python classify.py --help’ in the command line.
+"""
+
+__author__    = "Enrique Manjavacas"
+__copyright__ = "Copyright 2022, Enrique Manjavacas"
+__license__   = "GPL"
+__version__   = "1.0.1"
+
 
 import os
-from itsdangerous import NoneAlgorithm
+
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, RandomizedSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
-
 from sklearn.utils.fixes import loguniform
 import numpy as np
 import pandas as pd
@@ -15,7 +25,14 @@ import pandas as pd
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+    "This file performs classification on top of frozen embeddings. The embeddings can be "
+    "first extracted with the preprocess.py file."
+    "Evaluation is done with Cross-Validation. After training the cross-validation "
+    "results on each fold are stored to a {model}.results.parquet file."
+    "If a test-file was provided, then the model trained in each iteration is used "
+    "for prediction on the test file and the results are output to a file with the "
+    "suffix: {model}.test-results.parquet")
     parser.add_argument('--input-file', required=True, help='CSV file with embeddings in it')
     parser.add_argument('--test-file')
     parser.add_argument('--label', required=True)
