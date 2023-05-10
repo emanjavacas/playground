@@ -73,11 +73,10 @@ if __name__ == '__main__':
         test_data = pd.read_csv(args.test_file)
         for heading in [args.lhs, args.target, args.rhs]:
             test_data[heading] = test_data[heading].transform(normalise)
-            test_sents = test_data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
-            test_starts = test_data[args.lhs].str.len() + 1
-            test_stops = test_data[args.lhs].str.len() + 1 + test_data[args.target].str.len()
-            test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
-            test_sents, test_spans = np.array(test_sents), np.array(test_spans)
+        test_sents, test_starts, stest_stops = read_data(
+            test_data[args.lhs], test_data[args.target], test_data[args.rhs])
+        test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
+        test_sents, test_spans = np.array(test_sents), np.array(test_spans)
         test_y = np.array([label2id[label] for label in test_data[args.label].values])
         test0_dataset = get_dataset(tokenizer, test_sents, test_spans, test_y)
 
