@@ -211,6 +211,7 @@ if __name__ == '__main__':
     tokenizer.add_special_tokens({'additional_special_tokens': ['[TGT]']})
 
     data = pd.read_csv(args.input_file)
+    data = pd.fillna('')
     if any(data[args.label].value_counts() == 1):
         raise ValueError("Found singleton class")
 
