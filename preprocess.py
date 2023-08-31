@@ -21,12 +21,14 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 
 # Find start and end index of target word
-def read_data(lhs, target, rhs):
+def read_data(lhs, target, rhs, mask=None):
     """
     Computes the spans (start and end offsets) from a list of segmented sentences
     """
     sents, starts, ends = [], [], []
     for (lhs_i, target_i, rhs_i) in zip(lhs, target, rhs):
+        if mask is not None:
+            target_i = mask
         sents.append((lhs_i + ' ' + target_i + ' ' + rhs_i).strip())
         start = len(lhs_i) + 1 if lhs_i else 0
         starts.append(start)

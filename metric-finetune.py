@@ -193,6 +193,7 @@ if __name__ == '__main__':
                         help="Maximum number of support examples per sense in batch")
     parser.add_argument('--batch-size', type=int, default=10, 
                         help="Number of query examples per batch")
+    parser.add_argument('--mask-target', action='store_true')
     args = parser.parse_args()
 
     # Normalise whitespaces
@@ -216,9 +217,16 @@ if __name__ == '__main__':
     # prepare sents
     for heading in [args.lhs, args.target, args.rhs]:
         data[heading] = data[heading].transform(normalise)
-    sents = data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
-    starts = data[args.lhs].str.len() + 1
-    stops = data[args.lhs].str.len() + 1 + data[args.target].str.len()
+
+    if args.mask_target:
+        mask = (' ' + tokenizer.mask_token + ' ')
+        sents = data[[args.lhs, args.rhs]].agg(mask.join, axis=1).values.tolist()
+        starts = data[args.lhs].str.len() + 1
+        stops = data[args.lhs].str.len() + 1 + len(tokenizer.mask_token)
+    else:
+        sents = data[[args.lhs, args.target, args.rhs]].agg(' '.join, axis=1).values.tolist()
+        starts = data[args.lhs].str.len() + 1
+        stops = data[args.lhs].str.len() + 1 + data[args.target].str.len()
     sents, spans = encode_data(tokenizer, sents, starts, stops)
     sents, spans = np.array(sents), np.array(spans)
     # prepare labels

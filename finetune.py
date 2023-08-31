@@ -17,7 +17,7 @@ import pandas as pd
 import torch
 from datasets import Dataset
 from scipy.special import softmax
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import StratifiedKFold
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           DataCollatorWithPadding, EarlyStoppingCallback,
                           Trainer, TrainingArguments)
@@ -56,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--rhs', default='right', help='Name of the left context column.')
     parser.add_argument('--epochs', type=int, default=6, help="Number of epochs to train.")
     parser.add_argument('--output-dir', required=True, help="Directory to store the finetuned model.")
+    parser.add_argument('--mask-target', action='store_true')
     args = parser.parse_args()
 
     # Normalise whitespaces
@@ -75,7 +76,11 @@ if __name__ == '__main__':
     data = pd.read_csv(args.input_file)
     for heading in [args.lhs, args.target, args.rhs]:
         data[heading] = data[heading].transform(normalise)
-    sents, starts, ends = read_data(data[args.lhs], data[args.target], data[args.rhs])
+    mask = None
+    if args.mask_target:
+        mask = tokenizer.mask_token
+    sents, starts, ends = read_data(
+        data[args.lhs], data[args.target], data[args.rhs], mask=mask)
     sents, spans = encode_data(tokenizer, sents, starts, ends)
     sents, spans = np.array(sents), np.array(spans)
     # prepare labels
@@ -91,8 +96,8 @@ if __name__ == '__main__':
         test_data = pd.read_csv(args.test_file)
         for heading in [args.lhs, args.target, args.rhs]:
             test_data[heading] = test_data[heading].transform(normalise)
-        test_sents, test_starts, stest_stops = read_data(
-            test_data[args.lhs], test_data[args.target], test_data[args.rhs])
+        test_sents, test_starts, test_stops = read_data(
+            test_data[args.lhs], test_data[args.target], test_data[args.rhs], mask=mask)
         test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
         test_sents, test_spans = np.array(test_sents), np.array(test_spans)
         test_y = np.array([label2id[label] for label in test_data[args.label].values])
