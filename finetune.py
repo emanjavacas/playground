@@ -96,7 +96,7 @@ if __name__ == '__main__':
     if args.test_file:
         test_data = pd.read_csv(args.test_file)
         for heading in [args.lhs, args.target, args.rhs]:
-            test_data[heading] = test_data[heading].atype(str).transform(normalise)
+            test_data[heading] = test_data[heading].astype(str).transform(normalise)
         test_sents, test_starts, test_stops = read_data(
             test_data[args.lhs], test_data[args.target], test_data[args.rhs], mask=mask)
         test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
