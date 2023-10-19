@@ -61,6 +61,8 @@ if __name__ == '__main__':
 
     # Normalise whitespaces
     def normalise(example):
+        if not example:
+            return ''
         return ' '.join(example.split())
 
     if torch.cuda.is_available():
