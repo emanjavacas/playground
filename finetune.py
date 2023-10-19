@@ -61,8 +61,6 @@ if __name__ == '__main__':
 
     # Normalise whitespaces
     def normalise(example):
-        if not example:
-            return ''
         return ' '.join(example.split())
 
     if torch.cuda.is_available():
@@ -78,7 +76,7 @@ if __name__ == '__main__':
     data = pd.read_csv(args.input_file)
     data = data.fillna('')
     for heading in [args.lhs, args.target, args.rhs]:
-        data[heading] = data[heading].transform(normalise)
+        data[heading] = data[heading].astype(str).transform(normalise)
     mask = None
     if args.mask_target:
         mask = tokenizer.mask_token
@@ -98,7 +96,7 @@ if __name__ == '__main__':
     if args.test_file:
         test_data = pd.read_csv(args.test_file)
         for heading in [args.lhs, args.target, args.rhs]:
-            test_data[heading] = test_data[heading].transform(normalise)
+            test_data[heading] = test_data[heading].atype(str).transform(normalise)
         test_sents, test_starts, test_stops = read_data(
             test_data[args.lhs], test_data[args.target], test_data[args.rhs], mask=mask)
         test_sents, test_spans = encode_data(tokenizer, test_sents, test_starts, test_stops)
