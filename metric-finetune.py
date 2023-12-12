@@ -305,6 +305,8 @@ if __name__ == '__main__':
             }))
 
     prefix, suffix = os.path.splitext(args.input_file)
+    if args.infix:
+        prefix = ''.join([prefix, args.infix])
     pd.concat(folds).to_parquet(''.join([prefix, '.metric-finetune.results.parquet']))
 
     if test_data is not None:
