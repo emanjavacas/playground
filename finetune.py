@@ -50,6 +50,7 @@ if __name__ == '__main__':
                         help="The name of a transformer model (huggingface).")
     parser.add_argument('--input-file', required=True, help="File to do training on.")
     parser.add_argument('--test-file', help="File to do inference on.")
+    parser.add_argument('--infix', default='', help='String to add to the results file.')
     parser.add_argument('--label', required=True, help="Name of the label column.")
     parser.add_argument('--lhs', default='left', help='Name of the left context column.')
     parser.add_argument('--target', default='hit', help='Name of the left context column.')
@@ -168,6 +169,8 @@ if __name__ == '__main__':
             }))
 
     prefix, suffix = os.path.splitext(args.input_file)
+    if args.infix:
+        prefix = ''.join([prefix, args.infix])
     pd.concat(folds).to_parquet(''.join([prefix, '.finetune.results.parquet']))
 
     if test_data is not None:
