@@ -254,7 +254,7 @@ if __name__ == '__main__':
         test0_dataset = get_dataset(test_sents, test_spans, test_y)
 
     for fold, (train, test) in enumerate(cv.split(np.zeros(len(y)), y)):
-        train, dev = next(StratifiedKFold(10, shuffle=True).split(
+        train, dev = next(StratifiedKFold(args.folds, shuffle=True).split(
             np.zeros(len(train)), y[train]))
 
         train_dataset = get_dataset(sents[train], spans[train], y[train])
