@@ -56,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--target', default='hit', help='Name of the left context column.')
     parser.add_argument('--rhs', default='right', help='Name of the left context column.')
     parser.add_argument('--epochs', type=int, default=6, help="Number of epochs to train.")
+    parser.add_argument('--folds', default=10, type=int)
     parser.add_argument('--output-dir', required=True, help="Directory to store the finetuned model.")
     parser.add_argument('--mask-target', action='store_true')
     args = parser.parse_args()
@@ -90,7 +91,7 @@ if __name__ == '__main__':
     id2label = {id: label for label, id in label2id.items()}
     y = np.array([label2id[label] for label in data[args.label]])
 
-    cv = StratifiedKFold(10, shuffle=True, random_state=135)
+    cv = StratifiedKFold(args.folds, shuffle=True, random_state=135)
     folds = []
     test_folds = []
     test_data = None
